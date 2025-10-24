@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-4 py-2.5 border border-transparent text-sm font-semibold rounded-lg shadow-sm text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-4 py-2.5 border border-gray-300 text-sm font-semibold rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-200;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold rounded-lg text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-200;
+  }
+
+  .input {
+    @apply block w-full h-11 px-3 py-2 rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm transition-colors;
+  }
+
+  .label {
+    @apply block text-sm font-semibold text-gray-900 mb-2;
+  }
+
+  .card {
+    @apply bg-white overflow-hidden shadow-sm rounded-xl border border-gray-200 hover:shadow-md transition-shadow duration-200;
+  }
+
+  .stat-card {
+    @apply bg-white p-6 rounded-xl border border-gray-200 hover:border-orange-200 transition-all duration-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-orange {
+    @apply badge bg-orange-100 text-orange-800;
+  }
+
+  .badge-gray {
+    @apply badge bg-gray-100 text-gray-800;
+  }
+}
