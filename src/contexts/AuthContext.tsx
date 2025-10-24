@@ -49,18 +49,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   })
 
+  // Helper to ensure profile exists for user
+  const ensureProfile = async (userId: string, email: string) => {
+    if (!supabase) return
+    try {
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      console.log('[Auth] ensureProfile: fetch result', { userId, existingProfile, fetchError })
+      if (!existingProfile) {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert([{ id: userId, email, full_name: '' }])
+        if (insertError) {
+          console.error('[Auth] ensureProfile: error inserting profile', insertError)
+        } else {
+          console.log('[Auth] ensureProfile: created missing profile for user', userId)
+        }
+      }
+    } catch (err) {
+      console.error('[Auth] ensureProfile: error', err)
+    }
+  }
+
   const fetchProfile = async (userId: string) => {
     if (!supabase) return
+    console.log('[Auth] Fetching profile for userId:', userId)
 
     // Check cache first
     const cached = profileCacheRef.current.get(userId)
     if (cached) {
+      console.log('[Auth] Profile found in cache:', cached)
       setProfile(cached)
       return
     }
 
     try {
       const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
+      console.log('[Auth] Supabase profile fetch result:', { data, error })
 
       if (error) {
         if (
@@ -69,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ) {
           console.warn('[Auth] profiles table missing. Did you run supabase/schema.sql?')
         }
+        console.error('[Auth] Error fetching profile:', error)
         setProfile(null)
         return
       }
@@ -77,6 +106,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profileData = data as Profile
         profileCacheRef.current.set(userId, profileData)
         setProfile(profileData)
+      } else {
+        console.warn('[Auth] No profile data found for user:', userId)
+        setProfile(null)
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
@@ -105,9 +137,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const {
           data: { session },
         } = await supabase.auth.getSession()
-
+        console.log('[Auth] initAuth: session', session)
         if (session?.user) {
           setUser(session.user)
+          await ensureProfile(session.user.id, session.user.email || '')
           await fetchProfile(session.user.id)
         }
       } catch (error) {
@@ -132,9 +165,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+      console.log('[Auth] onAuthStateChange:', { event, session })
       setUser(session?.user ?? null)
 
       if (session?.user) {
+        await ensureProfile(session.user.id, session.user.email || '')
         await fetchProfile(session.user.id)
       } else {
         setProfile(null)

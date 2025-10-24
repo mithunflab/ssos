@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const supabase = useMemo(() => createBrowserClient(), [])
 
   useEffect(() => {
+    console.log('[Dashboard] useEffect: authLoading', authLoading, 'user', user)
     // If auth is still initializing, show loader until it finishes.
     if (authLoading) {
       setIsLoading(true)
@@ -28,6 +29,7 @@ export default function DashboardPage() {
 
     // If auth finished but there's no user, stop loading (prevents infinite skeleton)
     if (!user) {
+      console.log('[Dashboard] No user found, stopping loading.')
       setIsLoading(false)
       return
     }
@@ -36,76 +38,51 @@ export default function DashboardPage() {
       setIsLoading(true)
       try {
         // Parallel data fetching for better performance
-        const [clientsResult, remindersResult, clientCount, meetingCount, projectCount] =
+        const [clientsResult, remindersResult, clientsCountResult, meetingsCountResult] =
           await Promise.all([
-            // Fetch recent clients
             supabase
               .from('clients')
               .select('*')
               .eq('user_id', user.id)
               .order('created_at', { ascending: false })
               .limit(5),
-
-            // Fetch upcoming reminders
             supabase
               .from('reminders')
-              .select(
-                `
-                *,
-                meeting:meetings (
-                  *,
-                  client:clients (*),
-                  project:projects (*)
-                )
-              `
-              )
+              .select(`*,meeting:meetings (*,client:clients (*),project:projects (*))`)
               .eq('user_id', user.id)
               .eq('is_dismissed', false)
               .gte('remind_at', new Date().toISOString())
               .order('remind_at', { ascending: true })
               .limit(5),
-
-            // Fetch stats in parallel
             supabase
               .from('clients')
               .select('*', { count: 'exact', head: true })
               .eq('user_id', user.id),
-
             supabase
               .from('meetings')
               .select('*', { count: 'exact', head: true })
-              .eq('user_id', user.id)
-              .gte('meeting_time', new Date().toISOString()),
-
-            supabase
-              .from('projects')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', user.id)
-              .eq('status', 'active'),
+              .eq('user_id', user.id),
           ])
 
-        // Process clients
-        if (clientsResult.data) {
-          setRecentClients(clientsResult.data)
-          if (clientsResult.data.length === 0) {
-            setShowOnboarding(true)
-          }
-        }
+        console.log('[Dashboard] Fetched clients:', clientsResult)
+        console.log('[Dashboard] Fetched reminders:', remindersResult)
+        console.log('[Dashboard] Fetched clientsCountResult:', clientsCountResult)
+        console.log('[Dashboard] Fetched meetingsCountResult:', meetingsCountResult)
 
-        // Process reminders
-        if (remindersResult.data) {
-          setUpcomingReminders(remindersResult.data as ReminderWithMeeting[])
-        }
-
-        // Set stats
+        setRecentClients(clientsResult.data || [])
+        setUpcomingReminders(remindersResult.data || [])
         setStats({
-          clients: clientCount.count || 0,
-          meetings: meetingCount.count || 0,
-          projects: projectCount.count || 0,
+          clients: clientsCountResult.count || 0,
+          meetings: meetingsCountResult.count || 0,
+          projects: 0, // Add project count if needed
         })
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error)
-        setShowOnboarding(true)
+
+        // Show onboarding if no clients
+        if ((clientsResult.data || []).length === 0) {
+          setShowOnboarding(true)
+        }
+      } catch (err) {
+        console.error('[Dashboard] Error fetching dashboard data:', err)
       } finally {
         setIsLoading(false)
       }
