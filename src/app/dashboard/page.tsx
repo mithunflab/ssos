@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { TopBar } from '@/components/TopBar'
 import { DashboardSkeleton } from '@/components/SkeletonLoaders'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@/lib/supabase'
 import { Client, ReminderWithMeeting } from '@/types/database'
 import { formatRelativeTime, formatTimeAgo } from '@/lib/date-utils'
 import { Plus, Users, Calendar, Clock, TrendingUp, ArrowRight } from 'lucide-react'
@@ -17,7 +17,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ clients: 0, meetings: 0, projects: 0 })
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const supabase = useMemo(() => createClientComponentClient(), [])
+  const supabase = useMemo(() => createBrowserClient(), [])
 
   useEffect(() => {
     // If auth is still initializing, show loader until it finishes.

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useRef, useMemo } from 'react'
 import { User, type AuthChangeEvent, type Session } from '@supabase/supabase-js'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@/lib/supabase'
 import { Profile } from '@/types/database'
 
 interface AuthContextType {
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [supabase] = useState(() => {
     try {
-      const client = createClientComponentClient()
+      const client = createBrowserClient()
       return client
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to initialize Supabase')

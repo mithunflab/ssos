@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { MeetingsListSkeleton } from '@/components/SkeletonLoaders'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@/lib/supabase'
 import { MeetingWithDetails, Client } from '@/types/database'
 import { formatRelativeTime, formatDateForInput } from '@/lib/date-utils'
 import { Plus, Calendar, ExternalLink, Video, X } from 'lucide-react'
@@ -25,7 +25,7 @@ export default function MeetingsPage() {
     reminder_minutes: 15,
   })
   const [saving, setSaving] = useState(false)
-  const supabase = useMemo(() => createClientComponentClient(), [])
+  const supabase = useMemo(() => createBrowserClient(), [])
 
   useEffect(() => {
     if (!user || authLoading) return

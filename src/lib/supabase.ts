@@ -1,10 +1,10 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient as createBrowserClientSSR } from '@supabase/ssr'
 
 export const createBrowserClient = () => {
+  // Check if environment variables are set
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // Check if environment variables are set
   if (!supabaseUrl || !supabaseKey) {
     console.error('❌ SUPABASE NOT CONFIGURED!')
     console.error('Please create .env.local file with:')
@@ -19,29 +19,5 @@ export const createBrowserClient = () => {
     throw new Error('Please update Supabase credentials in .env.local')
   }
 
-  return createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: false, // Handle OAuth callbacks manually
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      // Use PKCE (recommended). The browser client will store code_verifier in localStorage
-      // and handle exchanging the code for a session on the client.
-      flowType: 'pkce',
-    },
-  })
-}
-
-export const createServerClient = () => {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    }
-  )
+  return createBrowserClientSSR(supabaseUrl, supabaseKey)
 }

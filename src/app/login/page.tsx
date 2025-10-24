@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { LogIn, Loader2 } from 'lucide-react'
 
@@ -14,7 +14,7 @@ function LoginForm() {
   const [success, setSuccess] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClientComponentClient()
+  const supabase = createBrowserClient()
 
   // Check if user is already logged in
   useEffect(() => {
