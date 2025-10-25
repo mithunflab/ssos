@@ -1,3 +1,9 @@
+-- Ensure every auth user has a matching profile row
+INSERT INTO public.profiles (id, email, full_name)
+SELECT a.id, a.email, COALESCE(a.raw_user_meta_data->>'full_name', '')
+FROM auth.users a
+LEFT JOIN public.profiles p ON a.id = p.id
+WHERE p.id IS NULL;
 -- Sample data for demonstration (replace user_id with actual user UUID after signup)
 
 -- This is a template - you'll need to replace 'YOUR_USER_ID' with the actual UUID 

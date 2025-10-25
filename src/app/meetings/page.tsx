@@ -15,6 +15,7 @@ export default function MeetingsPage() {
   const [clients, setClients] = useState<Client[]>([])
   const [showModal, setShowModal] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -40,6 +41,7 @@ export default function MeetingsPage() {
           .from('meetings')
           .select(
             `
+            setError(null)
             *,
             client:clients (*),
             project:projects (*)
@@ -60,6 +62,14 @@ export default function MeetingsPage() {
         setClients(clientsResult.data)
       }
 
+      if (meetingsResult.error) {
+        setError('Meetings fetch error: ' + meetingsResult.error.message)
+        console.error('[Meetings] Meetings fetch error:', meetingsResult.error)
+      }
+      if (clientsResult.error) {
+        setError('Clients fetch error: ' + clientsResult.error.message)
+        console.error('[Meetings] Clients fetch error:', clientsResult.error)
+      }
       setIsLoading(false)
     }
 

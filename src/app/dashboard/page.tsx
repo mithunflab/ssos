@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({ clients: 0, meetings: 0, projects: 0 })
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const supabase = useMemo(() => createBrowserClient(), [])
 
   useEffect(() => {
@@ -36,8 +37,8 @@ export default function DashboardPage() {
 
     const fetchDashboardData = async () => {
       setIsLoading(true)
+      setError(null)
       try {
-        // Parallel data fetching for better performance
         const [clientsResult, remindersResult, clientsCountResult, meetingsCountResult] =
           await Promise.all([
             supabase
@@ -64,24 +65,37 @@ export default function DashboardPage() {
               .eq('user_id', user.id),
           ])
 
-        console.log('[Dashboard] Fetched clients:', clientsResult)
-        console.log('[Dashboard] Fetched reminders:', remindersResult)
-        console.log('[Dashboard] Fetched clientsCountResult:', clientsCountResult)
-        console.log('[Dashboard] Fetched meetingsCountResult:', meetingsCountResult)
+        // Check for errors in any result
+        if (clientsResult.error) {
+          setError('Clients fetch error: ' + clientsResult.error.message)
+          console.error('[Dashboard] Clients fetch error:', clientsResult.error)
+        }
+        if (remindersResult.error) {
+          setError('Reminders fetch error: ' + remindersResult.error.message)
+          console.error('[Dashboard] Reminders fetch error:', remindersResult.error)
+        }
+        if (clientsCountResult.error) {
+          setError('Clients count fetch error: ' + clientsCountResult.error.message)
+          console.error('[Dashboard] Clients count fetch error:', clientsCountResult.error)
+        }
+        if (meetingsCountResult.error) {
+          setError('Meetings count fetch error: ' + meetingsCountResult.error.message)
+          console.error('[Dashboard] Meetings count fetch error:', meetingsCountResult.error)
+        }
 
         setRecentClients(clientsResult.data || [])
         setUpcomingReminders(remindersResult.data || [])
         setStats({
           clients: clientsCountResult.count || 0,
           meetings: meetingsCountResult.count || 0,
-          projects: 0, // Add project count if needed
+          projects: 0,
         })
 
-        // Show onboarding if no clients
         if ((clientsResult.data || []).length === 0) {
           setShowOnboarding(true)
         }
-      } catch (err) {
+      } catch (err: any) {
+        setError('Dashboard fetch error: ' + (err?.message || 'Unknown error'))
         console.error('[Dashboard] Error fetching dashboard data:', err)
       } finally {
         setIsLoading(false)
@@ -106,8 +120,19 @@ export default function DashboardPage() {
       />
 
       <div className="p-6 lg:p-8">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-8 bg-red-50 border-l-4 border-red-500 rounded-xl p-6">
+            <h2 className="text-lg font-bold text-red-900 mb-2">⚠️ Error Loading Dashboard</h2>
+            <p className="text-red-700 mb-4">{error}</p>
+            <p className="text-gray-700">
+              Check your Supabase configuration, RLS policies, and database setup. See console for
+              details.
+            </p>
+          </div>
+        )}
         {/* Onboarding Banner */}
-        {showOnboarding && (
+        {showOnboarding && !error && (
           <div className="mb-8 bg-gradient-to-r from-orange-50 to-orange-100 border-l-4 border-orange-500 rounded-xl p-6">
             <h2 className="text-lg font-bold text-gray-900 mb-2">🎉 Welcome to Clienter!</h2>
             <p className="text-gray-700 mb-4">

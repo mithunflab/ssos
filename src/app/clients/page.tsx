@@ -21,18 +21,24 @@ export default function ClientsPage() {
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user || authLoading) return
 
     const fetchClients = async () => {
       setIsLoading(true)
-      const { data } = await supabase
+      setError(null)
+      const { data, error } = await supabase
         .from('clients')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
+      if (error) {
+        setError('Clients fetch error: ' + error.message)
+        console.error('[Clients] Clients fetch error:', error)
+      }
       if (data) {
         setClients(data)
         setFilteredClients(data)
@@ -79,6 +85,19 @@ export default function ClientsPage() {
           <Link href="/clients/new" className="btn-primary">
             <Plus className="w-4 h-4 mr-2" />
             Add Client
+          </Link>
+        }
+      />
+
+      <div className="p-6 lg:p-8">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-8 bg-red-50 border-l-4 border-red-500 rounded-xl p-6">
+            <h2 className="text-lg font-bold text-red-900 mb-2">⚠️ Error Loading Clients</h2>
+            <p className="text-red-700 mb-4">{error}</p>
+            <p className="text-gray-700">Check your Supabase configuration, RLS policies, and database setup. See console for details.</p>
+          </div>
+        )}
           </Link>
         }
       />
