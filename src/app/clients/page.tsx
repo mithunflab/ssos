@@ -95,44 +95,15 @@ export default function ClientsPage() {
           <div className="mb-8 bg-red-50 border-l-4 border-red-500 rounded-xl p-6">
             <h2 className="text-lg font-bold text-red-900 mb-2">⚠️ Error Loading Clients</h2>
             <p className="text-red-700 mb-4">{error}</p>
-            <p className="text-gray-700">Check your Supabase configuration, RLS policies, and database setup. See console for details.</p>
+            <p className="text-gray-700">
+              Check your Supabase configuration, RLS policies, and database setup. See console for
+              details.
+            </p>
           </div>
         )}
         {/* Filters and Search */}
         <div className="card p-6 mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search clients by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input pl-10 w-full"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-
-          <div className="mt-4 flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Showing <span className="font-semibold">{filteredClients.length}</span> of{' '}
-              <span className="font-semibold">{clients.length}</span> clients
-            </p>
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="text-sm font-semibold text-orange-500 hover:text-orange-600"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
+          <div className="relative">{/* ...existing code... */}</div>
         </div>
 
         {/* Export Options */}

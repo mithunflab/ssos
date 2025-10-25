@@ -8,6 +8,7 @@ import { MeetingWithDetails, Client } from '@/types/database'
 import { formatRelativeTime, formatDateForInput } from '@/lib/date-utils'
 import { Plus, Calendar, ExternalLink, Video, X } from 'lucide-react'
 import Link from 'next/link'
+import { TopBar } from '@/components/TopBar'
 
 export default function MeetingsPage() {
   const { user, profile, loading: authLoading } = useAuth()
@@ -182,80 +183,40 @@ export default function MeetingsPage() {
     return <MeetingsListSkeleton />
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <div className="mb-8 bg-red-50 border-l-4 border-red-500 rounded-xl p-6 max-w-xl w-full">
+          <h2 className="text-lg font-bold text-red-900 mb-2">⚠️ Error Loading Meetings</h2>
+          <p className="text-red-700 mb-4">{error}</p>
+          <p className="text-gray-700 text-sm">
+            Check your Supabase configuration, RLS policies, and database setup. See console for
+            details.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Meetings</h1>
-              <p className="mt-2 text-gray-600">Schedule and manage your client meetings</p>
-            </div>
-            <div className="mt-4 sm:mt-0">
-              <button onClick={() => setShowModal(true)} className="btn-primary">
-                <Plus className="w-4 h-4 mr-2" />
-                Schedule Meeting
-              </button>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen">
+      <TopBar
+        title="Meetings"
+        description="Schedule and manage your client meetings"
+        actions={
+          <button className="btn-primary" onClick={() => setShowModal(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Schedule Meeting
+          </button>
+        }
+      />
 
-        {/* Upcoming Meetings */}
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Upcoming</h2>
-          {upcomingMeetings.length === 0 ? (
-            <div className="card p-8 text-center">
-              <Calendar className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-600">No upcoming meetings</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {upcomingMeetings.map((meeting) => (
-                <div key={meeting.id} className="card p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">{meeting.title}</h3>
-                      {meeting.client && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          Client:{' '}
-                          <Link
-                            href={`/clients/${meeting.client.id}`}
-                            className="text-primary-600 hover:text-primary-700"
-                          >
-                            {meeting.client.name}
-                          </Link>
-                        </p>
-                      )}
-                      {meeting.description && (
-                        <p className="text-sm text-gray-600 mt-2">{meeting.description}</p>
-                      )}
-                      <p className="text-sm text-gray-500 mt-2">
-                        {formatRelativeTime(meeting.meeting_time)} · {meeting.duration_minutes}{' '}
-                        minutes
-                      </p>
-                    </div>
-                    <div className="ml-4 flex space-x-2">
-                      <button
-                        onClick={() => handleOpenMeet(meeting.meeting_link || undefined)}
-                        className="btn-primary text-sm"
-                      >
-                        <Video className="w-4 h-4 mr-1" />
-                        {meeting.meeting_link ? 'Join' : 'Create'} Meeting
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMeeting(meeting.id)}
-                        className="btn-secondary text-sm text-red-600 hover:text-red-700"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="p-6 lg:p-8">
+        {/* Filters and Search */}
+        <div className="card p-6 mb-6">
+          <div className="relative">{/* Filters and Search UI goes here */}</div>
         </div>
 
         {/* Past Meetings */}

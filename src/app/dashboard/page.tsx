@@ -65,6 +65,12 @@ export default function DashboardPage() {
               .eq('user_id', user.id),
           ])
 
+        // Log fetch results for debugging
+        console.log('[Dashboard] Clients fetch result:', clientsResult)
+        console.log('[Dashboard] Reminders fetch result:', remindersResult)
+        console.log('[Dashboard] Clients count fetch result:', clientsCountResult)
+        console.log('[Dashboard] Meetings count fetch result:', meetingsCountResult)
+
         // Check for errors in any result
         if (clientsResult.error) {
           setError('Clients fetch error: ' + clientsResult.error.message)
@@ -81,6 +87,20 @@ export default function DashboardPage() {
         if (meetingsCountResult.error) {
           setError('Meetings count fetch error: ' + meetingsCountResult.error.message)
           console.error('[Dashboard] Meetings count fetch error:', meetingsCountResult.error)
+        }
+
+        // Log if no data returned
+        if (!clientsResult.data || clientsResult.data.length === 0) {
+          console.warn('[Dashboard] No clients data fetched.')
+        }
+        if (!remindersResult.data || remindersResult.data.length === 0) {
+          console.warn('[Dashboard] No reminders data fetched.')
+        }
+        if (!clientsCountResult.count) {
+          console.warn('[Dashboard] No clients count fetched.')
+        }
+        if (!meetingsCountResult.count) {
+          console.warn('[Dashboard] No meetings count fetched.')
         }
 
         setRecentClients(clientsResult.data || [])
