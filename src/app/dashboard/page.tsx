@@ -61,13 +61,44 @@ export default function DashboardPage() {
 
         console.log('[Dashboard] Starting individual queries...')
 
+        // Test basic network connectivity to Supabase
+        console.log('[Dashboard] Testing basic network connectivity to Supabase...')
+        try {
+          const response = await fetch('https://zviakkdqtmhqfkxjjqvn.supabase.co/rest/v1/', {
+            method: 'HEAD',
+            headers: {
+              'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+            },
+          })
+          console.log('[Dashboard] Basic network test result:', response.status, response.statusText)
+          if (!response.ok) {
+            setError(`Network connectivity issue: ${response.status} ${response.statusText}`)
+            return
+          }
+        } catch (networkError: any) {
+          console.error('[Dashboard] Basic network test failed:', networkError)
+          setError('Network connectivity error: ' + (networkError?.message || 'Cannot reach Supabase'))
+          return
+        }
+
         // Test Supabase connection first
         console.log('[Dashboard] Testing Supabase connection...')
-        const { data: testData, error: testError } = await supabase
-          .from('profiles')
-          .select('id')
-          .limit(1)
-        console.log('[Dashboard] Supabase connection test:', { testData, testError })
+        try {
+          const { data: testData, error: testError } = await supabase
+            .from('profiles')
+            .select('id')
+            .limit(1)
+          console.log('[Dashboard] Supabase connection test result:', { data: testData, error: testError })
+          if (testError) {
+            console.error('[Dashboard] Supabase connection test failed:', testError)
+            setError('Supabase connection failed: ' + testError.message)
+            return
+          }
+        } catch (connError: any) {
+          console.error('[Dashboard] Supabase connection test threw exception:', connError)
+          setError('Supabase connection error: ' + (connError?.message || 'Unknown network error'))
+          return
+        }
 
         console.log('[Dashboard] Fetching clients...')
         const clientsResult = await supabase
