@@ -35,41 +35,78 @@ export default function DashboardPage() {
       return
     }
 
-
-    console.log('before fetchDashboardData');
+    console.log('before fetchDashboardData')
 
     const fetchDashboardData = async () => {
-
-      console.log('yooooh [Dashboard] Fetching dashboard data for user:', user.id);
+      console.log('yooooh [Dashboard] Fetching dashboard data for user:', user.id)
 
       setIsLoading(true)
       setError(null)
+
+      // Add timeout to prevent infinite hanging
+      const timeout = setTimeout(() => {
+        console.error('[Dashboard] Fetch timeout after 30 seconds')
+        setError(
+          'Dashboard fetch timed out after 30 seconds. This indicates a network or database issue.'
+        )
+        setIsLoading(false)
+      }, 30000)
+
       try {
-        const [clientsResult, remindersResult, clientsCountResult, meetingsCountResult] =
-          await Promise.all([
-            supabase
-              .from('clients')
-              .select('*')
-              .eq('user_id', user.id)
-              .order('created_at', { ascending: false })
-              .limit(5),
-            supabase
-              .from('reminders')
-              .select(`*,meeting:meetings (*,client:clients (*),project:projects (*))`)
-              .eq('user_id', user.id)
-              .eq('is_dismissed', false)
-              .gte('remind_at', new Date().toISOString())
-              .order('remind_at', { ascending: true })
-              .limit(5),
-            supabase
-              .from('clients')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', user.id),
-            supabase
-              .from('meetings')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', user.id),
-          ])
+        console.log('inside try block of fetchDashboardData, before fetching data')
+
+        // Log Supabase configuration for debugging
+        console.log('[Dashboard] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
+        console.log('[Dashboard] Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+
+        console.log('[Dashboard] Starting individual queries...')
+
+        // Test Supabase connection first
+        console.log('[Dashboard] Testing Supabase connection...')
+        const { data: testData, error: testError } = await supabase
+          .from('profiles')
+          .select('id')
+          .limit(1)
+        console.log('[Dashboard] Supabase connection test:', { testData, testError })
+
+        console.log('[Dashboard] Fetching clients...')
+        const clientsResult = await supabase
+          .from('clients')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+        console.log('[Dashboard] Clients fetch result:', clientsResult)
+
+        console.log('[Dashboard] Fetching reminders...')
+        const remindersResult = await supabase
+          .from('reminders')
+          .select(`*,meeting:meetings (*,client:clients (*),project:projects (*))`)
+          .eq('user_id', user.id)
+          .eq('is_dismissed', false)
+          .gte('remind_at', new Date().toISOString())
+          .order('remind_at', { ascending: true })
+          .limit(5)
+        console.log('[Dashboard] Reminders fetch result:', remindersResult)
+
+        console.log('[Dashboard] Fetching clients count...')
+        const clientsCountResult = await supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        console.log('[Dashboard] Clients count fetch result:', clientsCountResult)
+
+        console.log('[Dashboard] Fetching meetings count...')
+        const meetingsCountResult = await supabase
+          .from('meetings')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        console.log('[Dashboard] Meetings count fetch result:', meetingsCountResult)
+
+        console.log('[Dashboard] All queries completed, processing results...')
+
+        // Clear timeout since we completed successfully
+        clearTimeout(timeout)
 
         // Log fetch results for debugging
         console.log('[Dashboard] Clients fetch result:', clientsResult)
@@ -81,18 +118,22 @@ export default function DashboardPage() {
         if (clientsResult.error) {
           setError('Clients fetch error: ' + clientsResult.error.message)
           console.error('[Dashboard] Clients fetch error:', clientsResult.error)
+          return
         }
         if (remindersResult.error) {
           setError('Reminders fetch error: ' + remindersResult.error.message)
           console.error('[Dashboard] Reminders fetch error:', remindersResult.error)
+          return
         }
         if (clientsCountResult.error) {
           setError('Clients count fetch error: ' + clientsCountResult.error.message)
           console.error('[Dashboard] Clients count fetch error:', clientsCountResult.error)
+          return
         }
         if (meetingsCountResult.error) {
           setError('Meetings count fetch error: ' + meetingsCountResult.error.message)
           console.error('[Dashboard] Meetings count fetch error:', meetingsCountResult.error)
+          return
         }
 
         // Log if no data returned
@@ -121,15 +162,16 @@ export default function DashboardPage() {
           setShowOnboarding(true)
         }
       } catch (err: any) {
+        clearTimeout(timeout)
         setError('Dashboard fetch error: ' + (err?.message || 'Unknown error'))
         console.error('[Dashboard] Error fetching dashboard data:', err)
       } finally {
+        clearTimeout(timeout)
         setIsLoading(false)
       }
     }
 
-    console.log('after fetchDashboardData');
-
+    console.log('after fetchDashboardData')
 
     fetchDashboardData()
   }, [user, authLoading, supabase])
