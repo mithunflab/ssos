@@ -20,6 +20,7 @@ export default function SettingsPage() {
     full_name: '',
     timezone: 'UTC',
     default_reminder_minutes: 15,
+    currency: 'INR',
   })
 
   const [notificationPermission, setNotificationPermission] =
@@ -47,6 +48,7 @@ export default function SettingsPage() {
         full_name: profile.full_name || '',
         timezone: profile.timezone || getUserTimezone(),
         default_reminder_minutes: profile.default_reminder_minutes || 15,
+        currency: profile.currency || 'INR',
       })
     }
   }, [profile])
@@ -64,6 +66,7 @@ export default function SettingsPage() {
         full_name: formData.full_name,
         timezone: formData.timezone,
         default_reminder_minutes: formData.default_reminder_minutes,
+        currency: formData.currency,
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id)
@@ -248,6 +251,31 @@ export default function SettingsPage() {
                 </select>
                 <p className="mt-1 text-sm text-gray-500">
                   Your current timezone: {getUserTimezone()}
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="currency" className="label">
+                  Currency
+                </label>
+                <select
+                  id="currency"
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleChange}
+                  className="input"
+                >
+                  <option value="INR">Indian Rupee (INR)</option>
+                  <option value="USD">US Dollar (USD)</option>
+                  <option value="EUR">Euro (EUR)</option>
+                  <option value="GBP">British Pound (GBP)</option>
+                  <option value="AUD">Australian Dollar (AUD)</option>
+                  <option value="CAD">Canadian Dollar (CAD)</option>
+                  <option value="JPY">Japanese Yen (JPY)</option>
+                  <option value="CNY">Chinese Yuan (CNY)</option>
+                </select>
+                <p className="mt-1 text-sm text-gray-500">
+                  Default currency for budgets and payments.
                 </p>
               </div>
             </div>

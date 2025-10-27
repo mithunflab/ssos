@@ -8,9 +8,10 @@ import Link from 'next/link'
 interface KanbanCardProps {
   client: Client
   isDragging?: boolean
+  currency?: string
 }
 
-export function KanbanCard({ client, isDragging }: KanbanCardProps) {
+export function KanbanCard({ client, isDragging, currency = 'USD' }: KanbanCardProps) {
   const {
     attributes,
     listeners,
@@ -53,12 +54,14 @@ export function KanbanCard({ client, isDragging }: KanbanCardProps) {
 
         {client.total_amount && (
           <p className="text-sm font-semibold text-gray-700 mb-2">
-            Total: {formatCurrency(client.total_amount)}
+            Total: {formatCurrency(client.total_amount, currency)}
           </p>
         )}
 
         {client.advance_paid && (
-          <p className="text-sm text-green-600 mb-2">Paid: {formatCurrency(client.advance_paid)}</p>
+          <p className="text-sm text-green-600 mb-2">
+            Paid: {formatCurrency(client.advance_paid, currency)}
+          </p>
         )}
 
         {client.project_description && (

@@ -31,7 +31,7 @@ import { KanbanCard } from '@/components/KanbanCard'
 const STATUSES = ['prospect', 'active', 'completed'] as const
 
 export default function ClientsPage() {
-  const { user, loading: authLoading, supabase } = useAuth()
+  const { user, profile, loading: authLoading, supabase } = useAuth()
   const [clients, setClients] = useState<Client[]>([])
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -230,12 +230,15 @@ export default function ClientsPage() {
                 title={getClientStatusLabel(status)}
                 clients={clientsByStatus[status]}
                 count={clientsByStatus[status].length}
+                currency={profile?.currency || 'INR'}
               />
             ))}
           </div>
 
           <DragOverlay>
-            {activeClient ? <KanbanCard client={activeClient} isDragging /> : null}
+            {activeClient ? (
+              <KanbanCard client={activeClient} isDragging currency={profile?.currency || 'INR'} />
+            ) : null}
           </DragOverlay>
         </DndContext>
 

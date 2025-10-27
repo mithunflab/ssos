@@ -4,6 +4,7 @@ export interface Profile {
   full_name: string | null
   timezone: string
   default_reminder_minutes: number
+  currency: string
   created_at: string
   updated_at: string
 }

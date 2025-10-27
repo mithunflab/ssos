@@ -17,7 +17,7 @@ import { ArrowLeft, Edit, Trash2, Plus, Phone, Calendar, DollarSign } from 'luci
 import Link from 'next/link'
 
 export default function ClientDetailPage() {
-  const { user, supabase } = useAuth()
+  const { user, profile, supabase } = useAuth()
   const router = useRouter()
   const params = useParams()
   const clientId = params?.id as string
@@ -260,18 +260,21 @@ export default function ClientDetailPage() {
                   {client.total_amount && (
                     <p className="text-lg text-gray-600 mt-1 flex items-center">
                       <DollarSign className="w-4 h-4 mr-2" />
-                      Total: {formatCurrency(client.total_amount)}
+                      Total: {formatCurrency(client.total_amount, profile?.currency || 'INR')}
                     </p>
                   )}
                   {client.advance_paid && client.advance_paid > 0 && (
                     <p className="text-lg text-green-600 mt-1 flex items-center">
-                      Paid: {formatCurrency(client.advance_paid)}
+                      Paid: {formatCurrency(client.advance_paid, profile?.currency || 'INR')}
                     </p>
                   )}
                   {client.total_amount && client.advance_paid !== undefined && (
                     <p className="text-lg text-orange-600 mt-1 flex items-center">
                       Balance:{' '}
-                      {formatCurrency((client.total_amount || 0) - (client.advance_paid || 0))}
+                      {formatCurrency(
+                        (client.total_amount || 0) - (client.advance_paid || 0),
+                        profile?.currency || 'INR'
+                      )}
                     </p>
                   )}
                 </div>
@@ -321,18 +324,20 @@ export default function ClientDetailPage() {
           <div className="card p-6">
             <div className="text-sm font-medium text-gray-600 mb-1">Total Amount</div>
             <div className="text-3xl font-bold text-gray-900">
-              {formatCurrency(client.total_amount || 0)}
+              {formatCurrency(client.total_amount || 0, profile?.currency || 'INR')}
             </div>
           </div>
           <div className="card p-6">
             <div className="text-sm font-medium text-gray-600 mb-1">Advance Paid</div>
             <div className="text-3xl font-bold text-green-600">
-              {formatCurrency(client.advance_paid || 0)}
+              {formatCurrency(client.advance_paid || 0, profile?.currency || 'INR')}
             </div>
           </div>
           <div className="card p-6">
             <div className="text-sm font-medium text-gray-600 mb-1">Balance Due</div>
-            <div className="text-3xl font-bold text-orange-600">{formatCurrency(balance)}</div>
+            <div className="text-3xl font-bold text-orange-600">
+              {formatCurrency(balance, profile?.currency || 'INR')}
+            </div>
           </div>
         </div>
 

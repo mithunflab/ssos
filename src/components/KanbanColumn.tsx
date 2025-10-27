@@ -8,9 +8,10 @@ interface KanbanColumnProps {
   title: string
   clients: Client[]
   count: number
+  currency?: string
 }
 
-export function KanbanColumn({ id, title, clients, count }: KanbanColumnProps) {
+export function KanbanColumn({ id, title, clients, count, currency = 'USD' }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id,
   })
@@ -28,7 +29,7 @@ export function KanbanColumn({ id, title, clients, count }: KanbanColumnProps) {
       <SortableContext items={clients.map((c) => c.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-3">
           {clients.map((client) => (
-            <KanbanCard key={client.id} client={client} />
+            <KanbanCard key={client.id} client={client} currency={currency} />
           ))}
         </div>
       </SortableContext>

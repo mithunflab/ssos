@@ -7,6 +7,7 @@ import { DashboardSkeleton } from '@/components/SkeletonLoaders'
 import { createBrowserClient } from '@/lib/supabase'
 import { Client, ReminderWithMeeting } from '@/types/database'
 import { formatRelativeTime, formatTimeAgo } from '@/lib/date-utils'
+import { formatCurrency } from '@/lib/utils'
 import { Plus, Users, Calendar, Clock, TrendingUp, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
@@ -330,7 +331,7 @@ export default function DashboardPage() {
                 <TrendingUp className="w-6 h-6 text-green-600 group-hover:text-white transition-colors" />
               </div>
               <span className="text-3xl font-bold text-gray-900">
-                ${stats.totalRevenue.toFixed(0)}
+                {formatCurrency(stats.totalRevenue, profile?.currency || 'INR')}
               </span>
             </div>
             <p className="text-sm font-semibold text-gray-600">Total Revenue</p>
