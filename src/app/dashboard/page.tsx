@@ -146,8 +146,9 @@ export default function DashboardPage() {
         console.log('[Dashboard] Fetching all clients for revenue calculation...')
         const allClientsResult = await supabase
           .from('clients')
-          .select('total_amount, advance_paid')
+          .select('total_amount, advance_paid, status')
           .eq('user_id', user.id)
+          .in('status', ['ongoing', 'potential'])
         console.log('[Dashboard] All clients fetch result:', allClientsResult)
 
         console.log('[Dashboard] Fetching meetings count...')
