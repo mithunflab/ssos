@@ -3,17 +3,15 @@
 import { useEffect } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { useReminderStore } from '@/store/reminderStore'
-import { createBrowserClient } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { ReminderWithMeeting } from '@/types/database'
 import { formatRelativeTime } from '@/lib/date-utils'
 import { Bell } from 'lucide-react'
 
 export function ReminderEngine() {
-  const { user } = useAuth()
+  const { user, supabase } = useAuth()
   const { reminders, activeReminders, setReminders, checkReminders, dismissReminder } =
     useReminderStore()
-  const supabase = createBrowserClient()
 
   // Request notification permission on mount
   useEffect(() => {

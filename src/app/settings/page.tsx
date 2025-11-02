@@ -3,18 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import { createBrowserClient } from '@/lib/supabase'
 import { getUserTimezone } from '@/lib/date-utils'
 import { User, Globe, Clock, Save, Bell, LogOut, Trash2 } from 'lucide-react'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 export default function SettingsPage() {
-  const { user, profile, refreshProfile, loading, signOut } = useAuth()
+  const { user, profile, refreshProfile, loading, signOut, supabase } = useAuth()
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
-  const supabase = createBrowserClient()
 
   const [formData, setFormData] = useState({
     full_name: '',

@@ -1,16 +1,15 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { MeetingsListSkeleton } from '@/components/SkeletonLoaders'
-import { createBrowserClient } from '@/lib/supabase'
 import { MeetingWithDetails, Client } from '@/types/database'
 import { formatRelativeTime, formatDateForInput } from '@/lib/date-utils'
 import { Plus, Calendar, ExternalLink, Video, X } from 'lucide-react'
 import Link from 'next/link'
 
 export default function MeetingsPage() {
-  const { user, profile, loading: authLoading } = useAuth()
+  const { user, profile, loading: authLoading, supabase } = useAuth()
   const [meetings, setMeetings] = useState<MeetingWithDetails[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [showModal, setShowModal] = useState(false)
@@ -25,7 +24,6 @@ export default function MeetingsPage() {
     reminder_minutes: 15,
   })
   const [saving, setSaving] = useState(false)
-  const supabase = useMemo(() => createBrowserClient(), [])
 
   useEffect(() => {
     if (!user || authLoading) return

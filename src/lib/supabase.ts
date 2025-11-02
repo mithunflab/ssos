@@ -1,9 +1,28 @@
 import { createBrowserClient as createBrowserClientSSR } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// Singleton instance
+let supabaseInstance: SupabaseClient | null = null
 
 export const createBrowserClient = () => {
+  // Return existing instance if available
+  if (supabaseInstance) {
+    return supabaseInstance
+  }
+
   // Check if environment variables are set
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  console.log('[Supabase Client] Initializing with URL:', supabaseUrl ? 'SET' : 'MISSING')
+  console.log(
+    '[Supabase Client] Anon Key:',
+    supabaseKey ? 'SET (length: ' + supabaseKey.length + ')' : 'MISSING'
+  )
+  console.log(
+    '[Supabase Client] Environment:',
+    typeof window !== 'undefined' ? 'browser' : 'server'
+  )
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('❌ SUPABASE NOT CONFIGURED!')
@@ -19,5 +38,19 @@ export const createBrowserClient = () => {
     throw new Error('Please update Supabase credentials in .env.local')
   }
 
-  return createBrowserClientSSR(supabaseUrl, supabaseKey)
+  console.log('[Supabase Client] Creating new client instance')
+  supabaseInstance = createBrowserClientSSR(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  })
+
+  return supabaseInstance
+}
+
+// Reset the singleton (useful for testing or re-initialization)
+export const resetSupabaseClient = () => {
+  supabaseInstance = null
 }

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { X, Bell, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { createBrowserClient } from '@/lib/supabase'
 import { ReminderWithMeeting } from '@/types/database'
 import { formatRelativeTime } from '@/lib/date-utils'
 
@@ -13,9 +12,8 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
-  const { user } = useAuth()
+  const { user, supabase } = useAuth()
   const [reminders, setReminders] = useState<ReminderWithMeeting[]>([])
-  const supabase = createBrowserClient()
 
   useEffect(() => {
     if (!isOpen || !user) return

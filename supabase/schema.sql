@@ -86,25 +86,6 @@ CREATE POLICY "Users can delete own clients"
   ON clients FOR DELETE 
   USING (user_id = auth.uid());
 
--- Projects
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own projects" 
-  ON projects FOR SELECT 
-  USING (user_id = auth.uid());
-
-CREATE POLICY "Users can insert own projects" 
-  ON projects FOR INSERT 
-  WITH CHECK (user_id = auth.uid());
-
-CREATE POLICY "Users can update own projects" 
-  ON projects FOR UPDATE 
-  USING (user_id = auth.uid());
-
-CREATE POLICY "Users can delete own projects" 
-  ON projects FOR DELETE 
-  USING (user_id = auth.uid());
-
 -- Meetings
 ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 

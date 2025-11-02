@@ -1,10 +1,9 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { TopBar } from '@/components/TopBar'
 import { DashboardSkeleton } from '@/components/SkeletonLoaders'
-import { createBrowserClient } from '@/lib/supabase'
 import { Client, ReminderWithMeeting } from '@/types/database'
 import { formatRelativeTime, formatTimeAgo } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/utils'
@@ -12,7 +11,7 @@ import { Plus, Users, Calendar, Clock, TrendingUp, ArrowRight } from 'lucide-rea
 import Link from 'next/link'
 
 export default function DashboardPage() {
-  const { user, profile, loading: authLoading } = useAuth()
+  const { user, profile, loading: authLoading, supabase } = useAuth()
   const [recentClients, setRecentClients] = useState<Client[]>([])
   const [upcomingReminders, setUpcomingReminders] = useState<ReminderWithMeeting[]>([])
   const [stats, setStats] = useState({
@@ -25,7 +24,6 @@ export default function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = useMemo(() => createBrowserClient(), [])
 
   useEffect(() => {
     console.log('[Dashboard] useEffect: authLoading', authLoading, 'user', user)
@@ -212,8 +210,11 @@ export default function DashboardPage() {
 
         // Calculate totals
         const allClients = allClientsResult.data || []
-        const totalRevenue = allClients.reduce((sum, c) => sum + (c.total_amount || 0), 0)
-        const totalPaid = allClients.reduce((sum, c) => sum + (c.advance_paid || 0), 0)
+        const totalRevenue = allClients.reduce(
+          (sum: number, c: any) => sum + (c.total_amount || 0),
+          0
+        )
+        const totalPaid = allClients.reduce((sum: number, c: any) => sum + (c.advance_paid || 0), 0)
         const totalDue = totalRevenue - totalPaid
 
         setRecentClients(clientsResult.data || [])
@@ -242,7 +243,8 @@ export default function DashboardPage() {
     console.log('after fetchDashboardData')
 
     fetchDashboardData()
-  }, [user, authLoading, supabase])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]) // Don't include supabase as it's stable from context
 
   // Show skeleton while loading
   if (authLoading || isLoading) {
