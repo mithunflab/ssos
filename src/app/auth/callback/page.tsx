@@ -37,7 +37,7 @@ export default function AuthCallbackPage() {
         }
 
         console.log('[Auth Callback] Exchanging code for session...')
-        
+
         // This will use the code verifier from localStorage automatically
         const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
@@ -56,7 +56,7 @@ export default function AuthCallbackPage() {
         }
 
         console.log('[Auth Callback] Session created successfully for:', data.session.user.email)
-        
+
         // Set session cookies via API for SSR
         try {
           await fetch('/api/auth/set-session', {
