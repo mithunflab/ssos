@@ -26,38 +26,53 @@ export default function MeetingsPage() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (!user || authLoading) return
+    if (!user || authLoading || !supabase) return
 
     const fetchData = async () => {
       setIsLoading(true)
 
-      // Parallel data fetching
-      const [meetingsResult, clientsResult] = await Promise.all([
-        // Fetch meetings
-        supabase
-          .from('meetings')
-          .select(
+      try {
+        // Add timeout protection
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Fetch meetings timed out after 10 seconds')), 10000)
+        )
+
+        // Parallel data fetching
+        const fetchPromise = Promise.all([
+          // Fetch meetings
+          supabase
+            .from('meetings')
+            .select(
+              `
+              *,
+              client:clients (*)
             `
-            *,
-            client:clients (*)
-          `
-          )
-          .eq('user_id', user.id)
-          .order('meeting_time', { ascending: true }),
+            )
+            .eq('user_id', user.id)
+            .order('meeting_time', { ascending: true }),
 
-        // Fetch clients for the form
-        supabase.from('clients').select('*').eq('user_id', user.id).order('name'),
-      ])
+          // Fetch clients for the form
+          supabase.from('clients').select('*').eq('user_id', user.id).order('name'),
+        ])
 
-      if (meetingsResult.data) {
-        setMeetings(meetingsResult.data as MeetingWithDetails[])
+        const [meetingsResult, clientsResult] = await Promise.race([fetchPromise, timeoutPromise])
+
+        if (meetingsResult.data) {
+          setMeetings(meetingsResult.data as MeetingWithDetails[])
+        } else if (meetingsResult.error) {
+          console.error('[Meetings] Error fetching meetings:', meetingsResult.error)
+        }
+
+        if (clientsResult.data) {
+          setClients(clientsResult.data)
+        } else if (clientsResult.error) {
+          console.error('[Meetings] Error fetching clients:', clientsResult.error)
+        }
+      } catch (err: any) {
+        console.error('[Meetings] Fetch error:', err)
+      } finally {
+        setIsLoading(false)
       }
-
-      if (clientsResult.data) {
-        setClients(clientsResult.data)
-      }
-
-      setIsLoading(false)
     }
 
     fetchData()

@@ -48,27 +48,41 @@ export default function ClientsPage() {
   )
 
   useEffect(() => {
-    if (!user || authLoading) return
+    if (!user || authLoading || !supabase) return
 
     const fetchClients = async () => {
       setIsLoading(true)
       setError(null)
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('status', { ascending: true })
-        .order('order', { ascending: true })
+      
+      try {
+        // Add timeout protection
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Fetch clients timed out after 10 seconds')), 10000)
+        )
+        
+        const fetchPromise = supabase
+          .from('clients')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('status', { ascending: true })
+          .order('order', { ascending: true })
+        
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise])
 
-      if (error) {
-        setError('Clients fetch error: ' + error.message)
-        console.error('[Clients] Clients fetch error:', error)
+        if (error) {
+          setError('Failed to load clients: ' + error.message)
+          console.error('[Clients] Clients fetch error:', error)
+        }
+        if (data) {
+          setClients(data)
+          setFilteredClients(data)
+        }
+      } catch (err: any) {
+        setError('Failed to load clients: ' + (err?.message || 'Unknown error'))
+        console.error('[Clients] Error:', err)
+      } finally {
+        setIsLoading(false)
       }
-      if (data) {
-        setClients(data)
-        setFilteredClients(data)
-      }
-      setIsLoading(false)
     }
 
     fetchClients()
