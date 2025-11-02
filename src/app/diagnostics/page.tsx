@@ -8,8 +8,10 @@ export default function DiagnosticsPage() {
   const [envCheck, setEnvCheck] = useState<any>(null)
   const [dbTest, setDbTest] = useState<any>(null)
   const [authTest, setAuthTest] = useState<any>(null)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    setIsClient(true)
     // Check environment variables
     fetch('/api/env-check')
       .then((res) => res.json())
@@ -91,11 +93,15 @@ export default function DiagnosticsPage() {
         {/* Browser Info */}
         <div className="card p-6 mb-6">
           <h2 className="text-xl font-bold mb-4">Browser Info</h2>
-          <div className="space-y-2 text-sm">
-            <p>User Agent: {navigator.userAgent}</p>
-            <p>Location: {window.location.href}</p>
-            <p>Cookies Enabled: {navigator.cookieEnabled ? '✅ Yes' : '❌ No'}</p>
-          </div>
+          {isClient ? (
+            <div className="space-y-2 text-sm">
+              <p>User Agent: {navigator.userAgent}</p>
+              <p>Location: {window.location.href}</p>
+              <p>Cookies Enabled: {navigator.cookieEnabled ? '✅ Yes' : '❌ No'}</p>
+            </div>
+          ) : (
+            <p>Loading browser info...</p>
+          )}
         </div>
 
         {/* Manual Tests */}
