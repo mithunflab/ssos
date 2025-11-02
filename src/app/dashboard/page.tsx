@@ -34,178 +34,141 @@ export default function DashboardPage() {
     }
 
     // If auth finished but there's no user, stop loading (prevents infinite skeleton)
-    if (!user) {
-      console.log('[Dashboard] No user found, stopping loading.')
+    if (!user || !supabase) {
+      console.log('[Dashboard] No user or supabase found, stopping loading.')
       setIsLoading(false)
       return
     }
 
-    console.log('before fetchDashboardData')
-
     const fetchDashboardData = async () => {
-      console.log('yooooh [Dashboard] Fetching dashboard data for user:', user.id)
+      console.log('[Dashboard] Fetching dashboard data for user:', user.id)
+
+      // Verify we have a valid supabase client with auth
+      if (!supabase) {
+        setError('Supabase client not initialized')
+        setIsLoading(false)
+        return
+      }
+
+      // Check if we have a valid session
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        console.log('[Dashboard] Current session:', { 
+          hasSession: !!session, 
+          userId: session?.user?.id,
+          error: sessionError 
+        })
+        
+        if (!session) {
+          setError('No active session found. Please try logging out and back in.')
+          setIsLoading(false)
+          return
+        }
+        
+        if (session.user.id !== user.id) {
+          setError('Session user mismatch. Please refresh the page.')
+          setIsLoading(false)
+          return
+        }
+      } catch (sessionCheckError) {
+        console.error('[Dashboard] Session check failed:', sessionCheckError)
+        setError('Failed to verify session. Please try refreshing the page.')
+        setIsLoading(false)
+        return
+      }
 
       setIsLoading(true)
       setError(null)
 
       // Add timeout to prevent infinite hanging
-      const timeout = setTimeout(() => {
-        console.error('[Dashboard] Fetch timeout after 30 seconds')
+      const timeoutId = setTimeout(() => {
+        console.error('[Dashboard] Fetch timeout after 15 seconds')
         setError(
-          'Dashboard fetch timed out after 30 seconds. This indicates a network or database issue.'
+          'Dashboard is taking too long to load. Please check your internet connection and try refreshing the page.'
         )
         setIsLoading(false)
-      }, 30000)
+      }, 15000) // Reduced to 15 seconds
 
       try {
-        console.log('inside try block of fetchDashboardData, before fetching data')
+        console.log('[Dashboard] Starting queries...')
 
-        // Log Supabase configuration for debugging
-        console.log('[Dashboard] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL)
-        console.log('[Dashboard] Supabase Key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-
-        console.log('[Dashboard] Starting individual queries...')
-
-        // Test basic network connectivity to Supabase
-        console.log('[Dashboard] Testing basic network connectivity to Supabase...')
-        try {
-          const response = await fetch('https://zviakkdqtmhqfkxjjqvn.supabase.co/rest/v1/', {
-            method: 'HEAD',
-            headers: {
-              apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-            },
-          })
-          console.log(
-            '[Dashboard] Basic network test result:',
-            response.status,
-            response.statusText
-          )
-          if (!response.ok) {
-            setError(`Network connectivity issue: ${response.status} ${response.statusText}`)
-            return
-          }
-        } catch (networkError: any) {
-          console.error('[Dashboard] Basic network test failed:', networkError)
-          setError(
-            'Network connectivity error: ' + (networkError?.message || 'Cannot reach Supabase')
-          )
-          return
+        // Helper function to add timeout to any promise
+        const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number, operation: string): Promise<T> => {
+          return Promise.race([
+            promise,
+            new Promise<T>((_, reject) =>
+              setTimeout(() => reject(new Error(`${operation} timed out after ${timeoutMs}ms`)), timeoutMs)
+            ),
+          ])
         }
 
-        // Test Supabase connection first
-        console.log('[Dashboard] Testing Supabase connection...')
-        try {
-          const { data: testData, error: testError } = await supabase
-            .from('profiles')
-            .select('id')
-            .limit(1)
-          console.log('[Dashboard] Supabase connection test result:', {
-            data: testData,
-            error: testError,
-          })
-          if (testError) {
-            console.error('[Dashboard] Supabase connection test failed:', testError)
-            setError('Supabase connection failed: ' + testError.message)
-            return
-          }
-        } catch (connError: any) {
-          console.error('[Dashboard] Supabase connection test threw exception:', connError)
-          setError('Supabase connection error: ' + (connError?.message || 'Unknown network error'))
-          return
-        }
+        // Fetch all data with proper error handling and timeout
+        const [clientsResult, remindersResult, clientsCountResult, allClientsResult, meetingsCountResult] = await withTimeout(
+          Promise.all([
+            supabase
+              .from('clients')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false })
+              .limit(5),
+            
+            supabase
+              .from('reminders')
+              .select(`*,meeting:meetings (*,client:clients (*))`)
+              .eq('user_id', user.id)
+              .eq('is_dismissed', false)
+              .gte('remind_at', new Date().toISOString())
+              .order('remind_at', { ascending: true })
+              .limit(5),
+            
+            supabase
+              .from('clients')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', user.id),
+            
+            supabase
+              .from('clients')
+              .select('total_amount, advance_paid, status')
+              .eq('user_id', user.id)
+              .in('status', ['ongoing', 'potential']),
+            
+            supabase
+              .from('meetings')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', user.id)
+          ]),
+          10000, // 10 second timeout for all queries combined
+          'Dashboard data fetch'
+        )
 
-        console.log('[Dashboard] Fetching clients...')
-        const clientsResult = await supabase
-          .from('clients')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(5)
-        console.log('[Dashboard] Clients fetch result:', clientsResult)
-
-        console.log('[Dashboard] Fetching reminders...')
-        const remindersResult = await supabase
-          .from('reminders')
-          .select(`*,meeting:meetings (*,client:clients (*))`)
-          .eq('user_id', user.id)
-          .eq('is_dismissed', false)
-          .gte('remind_at', new Date().toISOString())
-          .order('remind_at', { ascending: true })
-          .limit(5)
-        console.log('[Dashboard] Reminders fetch result:', remindersResult)
-
-        console.log('[Dashboard] Fetching clients count...')
-        const clientsCountResult = await supabase
-          .from('clients')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-        console.log('[Dashboard] Clients count fetch result:', clientsCountResult)
-
-        console.log('[Dashboard] Fetching all clients for revenue calculation...')
-        const allClientsResult = await supabase
-          .from('clients')
-          .select('total_amount, advance_paid, status')
-          .eq('user_id', user.id)
-          .in('status', ['ongoing', 'potential'])
-        console.log('[Dashboard] All clients fetch result:', allClientsResult)
-
-        console.log('[Dashboard] Fetching meetings count...')
-        const meetingsCountResult = await supabase
-          .from('meetings')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-        console.log('[Dashboard] Meetings count fetch result:', meetingsCountResult)
-
-        console.log('[Dashboard] All queries completed, processing results...')
+        console.log('[Dashboard] All queries completed')
 
         // Clear timeout since we completed successfully
-        clearTimeout(timeout)
-
-        // Log fetch results for debugging
-        console.log('[Dashboard] Clients fetch result:', clientsResult)
-        console.log('[Dashboard] Reminders fetch result:', remindersResult)
-        console.log('[Dashboard] Clients count fetch result:', clientsCountResult)
-        console.log('[Dashboard] Meetings count fetch result:', meetingsCountResult)
+        clearTimeout(timeoutId)
 
         // Check for errors in any result
         if (clientsResult.error) {
-          setError('Clients fetch error: ' + clientsResult.error.message)
           console.error('[Dashboard] Clients fetch error:', clientsResult.error)
+          setError('Failed to load clients: ' + clientsResult.error.message)
+          clearTimeout(timeoutId)
           return
         }
         if (remindersResult.error) {
-          setError('Reminders fetch error: ' + remindersResult.error.message)
           console.error('[Dashboard] Reminders fetch error:', remindersResult.error)
-          return
+          // Don't fail completely if reminders fail, just log
+          console.warn('[Dashboard] Continuing without reminders')
         }
         if (clientsCountResult.error) {
-          setError('Clients count fetch error: ' + clientsCountResult.error.message)
-          console.error('[Dashboard] Clients count fetch error:', clientsCountResult.error)
-          return
-        }
-        if (meetingsCountResult.error) {
-          setError('Meetings count fetch error: ' + meetingsCountResult.error.message)
-          console.error('[Dashboard] Meetings count fetch error:', meetingsCountResult.error)
-          return
+          console.error('[Dashboard] Clients count error:', clientsCountResult.error)
+          // Don't fail completely
         }
         if (allClientsResult.error) {
-          setError('All clients fetch error: ' + allClientsResult.error.message)
-          console.error('[Dashboard] All clients fetch error:', allClientsResult.error)
-          return
+          console.error('[Dashboard] All clients error:', allClientsResult.error)
+          // Don't fail completely
         }
-
-        // Log if no data returned
-        if (!clientsResult.data || clientsResult.data.length === 0) {
-          console.warn('[Dashboard] No clients data fetched.')
-        }
-        if (!remindersResult.data || remindersResult.data.length === 0) {
-          console.warn('[Dashboard] No reminders data fetched.')
-        }
-        if (!clientsCountResult.count) {
-          console.warn('[Dashboard] No clients count fetched.')
-        }
-        if (!meetingsCountResult.count) {
-          console.warn('[Dashboard] No meetings count fetched.')
+        if (meetingsCountResult.error) {
+          console.error('[Dashboard] Meetings count error:', meetingsCountResult.error)
+          // Don't fail completely
         }
 
         // Calculate totals
@@ -231,16 +194,14 @@ export default function DashboardPage() {
           setShowOnboarding(true)
         }
       } catch (err: any) {
-        clearTimeout(timeout)
-        setError('Dashboard fetch error: ' + (err?.message || 'Unknown error'))
+        clearTimeout(timeoutId)
         console.error('[Dashboard] Error fetching dashboard data:', err)
+        setError('Failed to load dashboard: ' + (err?.message || 'Unknown error. Please try refreshing the page.'))
       } finally {
-        clearTimeout(timeout)
+        clearTimeout(timeoutId)
         setIsLoading(false)
       }
     }
-
-    console.log('after fetchDashboardData')
 
     fetchDashboardData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
