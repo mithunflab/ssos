@@ -16,8 +16,35 @@ export default function AuthCallback() {
 
         const supabase = createBrowserClient()
 
-        // The @supabase/ssr browser client automatically handles the code exchange
-        // and uses the code_verifier from cookies
+        // Extract code from URL (can be in search or hash)
+        const searchParams = new URLSearchParams(window.location.search)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+
+        const code = searchParams.get('code') || hashParams.get('code')
+        console.log('[Auth Callback] Extracted code:', code ? 'Present' : 'Missing')
+
+        if (code) {
+          console.log('[Auth Callback] Exchanging code for session...')
+          const { data: exchangeData, error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code)
+
+          if (exchangeError) {
+            console.error('[Auth Callback] Code exchange error:', exchangeError)
+            setError(exchangeError.message)
+            setTimeout(() => {
+              router.push(
+                '/login?error=oauth_failed&details=' + encodeURIComponent(exchangeError.message)
+              )
+            }, 2000)
+            return
+          }
+
+          console.log('[Auth Callback] Code exchange successful')
+        } else {
+          console.log('[Auth Callback] No code in URL, checking existing session...')
+        }
+
+        // Now get the session
         const {
           data: { session },
           error: sessionError,
