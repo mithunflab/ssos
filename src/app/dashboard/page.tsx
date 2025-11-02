@@ -27,15 +27,16 @@ export default function DashboardPage() {
 
   useEffect(() => {
     console.log('[Dashboard] useEffect: authLoading', authLoading, 'user', user)
-    // If auth is still initializing, show loader until it finishes.
+    
+    // If auth is still initializing, show loader
     if (authLoading) {
       setIsLoading(true)
       return
     }
 
-    // If auth finished but there's no user, stop loading (prevents infinite skeleton)
+    // If auth finished but there's no user, clear loading
     if (!user || !supabase) {
-      console.log('[Dashboard] No user or supabase found, stopping loading.')
+      console.log('[Dashboard] No user or supabase found after auth loading completed')
       setIsLoading(false)
       return
     }
@@ -56,19 +57,25 @@ export default function DashboardPage() {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession()
-        console.log('[Dashboard] Current session:', {
+        console.log('[Dashboard] Current session check:', {
           hasSession: !!session,
           userId: session?.user?.id,
+          userIdMatch: session?.user?.id === user.id,
           error: sessionError,
         })
 
         if (!session) {
+          console.error('[Dashboard] No session found!')
           setError('No active session found. Please try logging out and back in.')
           setIsLoading(false)
           return
         }
 
         if (session.user.id !== user.id) {
+          console.error('[Dashboard] Session user mismatch:', {
+            contextUserId: user.id,
+            sessionUserId: session.user.id,
+          })
           setError('Session user mismatch. Please refresh the page.')
           setIsLoading(false)
           return
@@ -90,10 +97,10 @@ export default function DashboardPage() {
           'Dashboard is taking too long to load. Please check your internet connection and try refreshing the page.'
         )
         setIsLoading(false)
-      }, 15000) // Reduced to 15 seconds
+      }, 15000)
 
       try {
-        console.log('[Dashboard] Starting queries...')
+        console.log('[Dashboard] Starting data queries for user:', user.id)
 
         // Helper function to add timeout to any promise
         const withTimeout = <T,>(
@@ -153,11 +160,11 @@ export default function DashboardPage() {
               .select('*', { count: 'exact', head: true })
               .eq('user_id', user.id),
           ]),
-          10000, // 10 second timeout for all queries combined
+          10000,
           'Dashboard data fetch'
         )
 
-        console.log('[Dashboard] All queries completed')
+        console.log('[Dashboard] All queries completed successfully')
 
         // Clear timeout since we completed successfully
         clearTimeout(timeoutId)
@@ -166,25 +173,20 @@ export default function DashboardPage() {
         if (clientsResult.error) {
           console.error('[Dashboard] Clients fetch error:', clientsResult.error)
           setError('Failed to load clients: ' + clientsResult.error.message)
-          clearTimeout(timeoutId)
           return
         }
         if (remindersResult.error) {
           console.error('[Dashboard] Reminders fetch error:', remindersResult.error)
-          // Don't fail completely if reminders fail, just log
           console.warn('[Dashboard] Continuing without reminders')
         }
         if (clientsCountResult.error) {
           console.error('[Dashboard] Clients count error:', clientsCountResult.error)
-          // Don't fail completely
         }
         if (allClientsResult.error) {
           console.error('[Dashboard] All clients error:', allClientsResult.error)
-          // Don't fail completely
         }
         if (meetingsCountResult.error) {
           console.error('[Dashboard] Meetings count error:', meetingsCountResult.error)
-          // Don't fail completely
         }
 
         // Calculate totals
@@ -223,8 +225,7 @@ export default function DashboardPage() {
     }
 
     fetchDashboardData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading]) // Don't include supabase as it's stable from context
+  }, [user, authLoading])
 
   // Show skeleton while loading
   if (authLoading || isLoading) {

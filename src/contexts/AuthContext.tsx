@@ -172,12 +172,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const restoreSession = async () => {
       try {
+        console.log('[Auth] Starting session restoration...')
+        
+        // First, wait a moment for any pending auth state changes from callback
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        
         // Try to restore session from cookies
         const {
           data: { session },
           error: sessionError,
         } = await supabase.auth.getSession()
-        console.log('[Auth] restoreSession: session', session, sessionError)
+        
+        console.log('[Auth] restoreSession: session exists?', !!session, 'userId:', session?.user?.id, 'error:', sessionError)
+        
         if (sessionError) {
           console.error('[Auth] Session restoration failed:', sessionError)
           setUser(null)
@@ -187,7 +194,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           initializingRef.current = false
           return
         }
+        
         if (session?.user) {
+          console.log('[Auth] Session found for user:', session.user.email)
           setUser(session.user)
           const profileEnsured = await ensureProfile(session.user.id, session.user.email || '')
           if (profileEnsured) {
@@ -196,6 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           await fetchProfile(session.user.id)
         } else {
+          console.log('[Auth] No session found during restoration')
           setUser(null)
           setProfile(null)
           profileCacheRef.current.clear()
@@ -213,40 +223,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     restoreSession()
 
-    // Reduced timeout for faster failure recovery
-    const timeout = setTimeout(() => {
-      if (loading) {
+    // Timeout for faster failure recovery (3 seconds on Vercel)
+    const timeoutId = setTimeout(() => {
+      if (loading && initializingRef.current) {
+        console.warn('[Auth] Session restoration timeout - marking as initialized')
         setLoading(false)
         initializingRef.current = false
       }
-    }, 2000)
+    }, 3000)
 
-    // Listen for auth state changes
+    // Listen for auth state changes - this is critical for catching session updates
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
-      console.log('[Auth] onAuthStateChange:', { event, session })
-      if (session?.user) {
-        setUser(session.user)
-        const profileEnsured = await ensureProfile(session.user.id, session.user.email || '')
-        if (profileEnsured) {
-          // Small delay to let database trigger complete if profile was just created
-          await new Promise((resolve) => setTimeout(resolve, 100))
+      console.log('[Auth] onAuthStateChange event:', event, 'has session:', !!session, 'userId:', session?.user?.id)
+      
+      try {
+        if (session?.user) {
+          console.log('[Auth] User authenticated via state change:', session.user.email)
+          setUser(session.user)
+          const profileEnsured = await ensureProfile(session.user.id, session.user.email || '')
+          if (profileEnsured) {
+            // Small delay to let database trigger complete if profile was just created
+            await new Promise((resolve) => setTimeout(resolve, 100))
+          }
+          await fetchProfile(session.user.id)
+        } else {
+          console.log('[Auth] User logged out via state change')
+          setUser(null)
+          setProfile(null)
+          profileCacheRef.current.clear()
         }
-        await fetchProfile(session.user.id)
-      } else {
-        setUser(null)
-        setProfile(null)
-        profileCacheRef.current.clear()
+      } catch (err) {
+        console.error('[Auth] Error handling auth state change:', err)
       }
+      
       if (loading) {
         setLoading(false)
+        initializingRef.current = false
       }
     })
 
     return () => {
       subscription.unsubscribe()
-      clearTimeout(timeout)
+      clearTimeout(timeoutId)
     }
   }, [supabase])
 
