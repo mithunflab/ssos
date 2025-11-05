@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useRef, useMemo } from 
 import { User, type AuthChangeEvent, type Session } from '@supabase/supabase-js'
 import { createBrowserClient } from '@/lib/supabase'
 import { Profile } from '@/types/database'
+import { globalCache } from '@/lib/cache'
 
 interface AuthContextType {
   user: User | null
@@ -103,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('[Auth] Fetching profile for userId:', userId)
 
     // Check cache first
-    const cached = profileCacheRef.current.get(userId)
+    const cached = globalCache.get<Profile>(`profile:${userId}`)
     if (cached) {
       console.log('[Auth] Profile found in cache:', cached)
       setProfile(cached)
@@ -135,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data) {
         const profileData = data as Profile
-        profileCacheRef.current.set(userId, profileData)
+        globalCache.set(`profile:${userId}`, profileData)
         setProfile(profileData)
         // Check for ID mismatch
         if (profileData.id !== userId) {
@@ -157,7 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = async () => {
     if (user) {
       // Clear cache for this user
-      profileCacheRef.current.delete(user.id)
+      globalCache.clearForUser(user.id)
       await fetchProfile(user.id)
     }
   }
@@ -261,7 +262,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Small delay to let database trigger complete if profile was just created
             await new Promise((resolve) => setTimeout(resolve, 100))
           }
-          await fetchProfile(session.user.id)
+          
+          // Prefetch user data
+          const { prefetchUserData } = await import('@/lib/prefetch')
+          const userData = await prefetchUserData(supabase, session.user.id)
+          if (userData?.profile) {
+            setProfile(userData.profile)
+          } else {
+            await fetchProfile(session.user.id)
+          }
         } else {
           console.log('[Auth] User logged out via state change')
           setUser(null)

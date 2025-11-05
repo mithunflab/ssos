@@ -131,8 +131,7 @@ export function AuthModal({ isOpen, onClose, returnUrl }: AuthModalProps) {
 
             <button
               onClick={() => {
-                router.push(`/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`)
-                onClose()
+                window.location.href = `/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
               }}
               className="w-full btn-secondary"
             >
