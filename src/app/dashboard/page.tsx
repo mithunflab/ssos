@@ -7,6 +7,7 @@ import { DashboardSkeleton } from '@/components/SkeletonLoaders'
 import { Client, ReminderWithMeeting } from '@/types/database'
 import { formatRelativeTime, formatTimeAgo } from '@/lib/date-utils'
 import { formatCurrency } from '@/lib/utils'
+import { fetchDashboardData } from '@/lib/dashboard-queries'
 import { Plus, Users, Calendar, Clock, TrendingUp, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
@@ -26,22 +27,49 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    let isSubscribed = true
     console.log('[Dashboard] useEffect: authLoading', authLoading, 'user', user)
 
     // If auth is still initializing, show loader
     if (authLoading) {
       setIsLoading(true)
-      return
+      return () => { isSubscribed = false }
     }
 
     // If auth finished but there's no user, clear loading
     if (!user || !supabase) {
       console.log('[Dashboard] No user or supabase found after auth loading completed')
       setIsLoading(false)
-      return
+      return () => { isSubscribed = false }
     }
 
-    const fetchDashboardData = async () => {
+    const loadDashboard = async () => {
+      if (!isSubscribed) return
+      
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const data = await fetchDashboardData(supabase, user.id)
+        
+        if (!isSubscribed) return
+
+        setRecentClients(data.recentClients)
+        setUpcomingReminders(data.upcomingReminders)
+        setStats(data.stats)
+        setShowOnboarding(data.recentClients.length === 0)
+      } catch (err: any) {
+        console.error('[Dashboard] Error:', err)
+        if (!isSubscribed) return
+        setError(err.message || 'Failed to load dashboard data')
+      } finally {
+        if (isSubscribed) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadDashboard()
       console.log('[Dashboard] Fetching dashboard data for user:', user.id)
 
       // Verify we have a valid supabase client with auth
@@ -102,6 +130,23 @@ export default function DashboardPage() {
       try {
         console.log('[Dashboard] Starting data queries for user:', user.id)
 
+        // Create a wrapper for Supabase queries with retry logic
+        const withRetry = async <T,>(
+          operation: () => Promise<T>,
+          retries = 2,
+          delay = 1000
+        ): Promise<T> => {
+          for (let i = 0; i < retries; i++) {
+            try {
+              return await operation()
+            } catch (err) {
+              if (i === retries - 1) throw err
+              await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
+            }
+          }
+          throw new Error('All retries failed')
+        }
+
         // Helper function to add timeout to any promise
         const withTimeout = <T,>(
           promise: Promise<T>,
@@ -120,29 +165,71 @@ export default function DashboardPage() {
         }
 
         // Fetch all data with proper error handling and timeout
+        // Split data fetching into smaller chunks for better performance
+        const fetchRecentClients = withRetry(() =>
+          supabase
+            .from('clients')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(5)
+        )
+
+        const fetchReminders = withRetry(() =>
+          supabase
+            .from('reminders')
+            .select(`*,meeting:meetings (*,client:clients (*))`)
+            .eq('user_id', user.id)
+            .eq('is_dismissed', false)
+            .gte('remind_at', new Date().toISOString())
+            .order('remind_at', { ascending: true })
+            .limit(5)
+        )
+
+        // Execute queries in parallel with individual timeouts
+        const [clientsResult, remindersResult] = await Promise.all([
+          withTimeout(fetchRecentClients(), 5000, 'Recent clients fetch'),
+          withTimeout(fetchReminders(), 5000, 'Reminders fetch'),
+        ])
+
+        // If we have the essential data, start rendering and fetch stats in background
+        if (clientsResult.data) {
+          setRecentClients(clientsResult.data)
+          setIsLoading(false)
+        }
+
+        // Fetch stats in the background
         const [
-          clientsResult,
-          remindersResult,
           clientsCountResult,
           allClientsResult,
           meetingsCountResult,
         ] = await withTimeout(
           Promise.all([
-            supabase
-              .from('clients')
-              .select('*')
-              .eq('user_id', user.id)
-              .order('created_at', { ascending: false })
-              .limit(5),
+            withRetry(() =>
+              supabase
+                .from('clients')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+            ),
 
-            supabase
-              .from('reminders')
-              .select(`*,meeting:meetings (*,client:clients (*))`)
-              .eq('user_id', user.id)
-              .eq('is_dismissed', false)
-              .gte('remind_at', new Date().toISOString())
-              .order('remind_at', { ascending: true })
-              .limit(5),
+            withRetry(() =>
+              supabase
+                .from('clients')
+                .select('total_amount, advance_paid, status')
+                .eq('user_id', user.id)
+                .in('status', ['ongoing', 'potential'])
+            ),
+
+            withRetry(() =>
+              supabase
+                .from('meetings')
+                .select('*', { count: 'exact', head: true })
+                .eq('user_id', user.id)
+            ),
+          ]),
+          8000,
+          'Stats fetch'
+        )
 
             supabase
               .from('clients')
