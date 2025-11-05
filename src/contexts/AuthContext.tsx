@@ -103,11 +103,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) return
     console.log('[Auth] Fetching profile for userId:', userId)
 
-    // Check cache first
-    const cached = globalCache.get<Profile>(`profile:${userId}`)
+    // Use the cache with a shorter timeout for authenticated users
+    const cacheKey = `profile:${userId}`
+    const cached = globalCache.get<Profile>(cacheKey)
     if (cached) {
       console.log('[Auth] Profile found in cache:', cached)
       setProfile(cached)
+      // Refresh cache in background after 30 seconds
+      if (Date.now() - globalCache.getTimestamp(cacheKey)! > 30000) {
+        setTimeout(() => refreshProfile(), 0)
+      }
       return
     }
 
@@ -156,10 +161,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refreshProfile = async () => {
-    if (user) {
-      // Clear cache for this user
+    if (!user || !supabase) return;
+    
+    try {
+      // Clear existing cache
       globalCache.clearForUser(user.id)
-      await fetchProfile(user.id)
+      
+      // Fetch profile and essential data in parallel
+      const [profileResult, clientsResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle(),
+          
+        supabase
+          .from('clients')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+      ])
+
+      if (profileResult.error) throw profileResult.error
+      if (profileResult.data) {
+        globalCache.set(`profile:${user.id}`, profileResult.data)
+        setProfile(profileResult.data)
+      }
+
+      if (!clientsResult.error && clientsResult.data) {
+        globalCache.set(`clients:${user.id}`, clientsResult.data)
+      }
+    } catch (err) {
+      console.error('[Auth] Error refreshing profile:', err)
     }
   }
 

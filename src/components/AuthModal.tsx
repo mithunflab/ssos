@@ -131,7 +131,7 @@ export function AuthModal({ isOpen, onClose, returnUrl }: AuthModalProps) {
 
             <button
               onClick={() => {
-                window.location.href = `/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
+                window.location.replace(`/login${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`)
               }}
               className="w-full btn-secondary"
             >
@@ -143,7 +143,7 @@ export function AuthModal({ isOpen, onClose, returnUrl }: AuthModalProps) {
             Don't have an account?{' '}
             <button
               onClick={() => {
-                router.push('/signup')
+                window.location.href = `/signup${returnUrl ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ''}`
                 onClose()
               }}
               className="text-orange-600 hover:text-orange-500 font-semibold"
