@@ -20,14 +20,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Define protected and auth paths
-  const isProtectedPath =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/clients') ||
-    pathname.startsWith('/meetings') ||
-    pathname.startsWith('/settings')
+  // Define public and auth paths
+  const isPublicPath = 
+    pathname === '/' || 
+    pathname.startsWith('/public/') ||
+    pathname === '/privacy' ||
+    pathname === '/terms'
 
   const isAuthPage = pathname === '/login' || pathname === '/signup'
+
+  // Everything else is protected
+  const isProtectedPath = !isPublicPath && !isAuthPage
 
   // Check cache first
   let hasSession = sessionCache.get(req)
@@ -64,16 +67,26 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Redirect logic
+  // Redirect logic with return URL
   if (isProtectedPath && !hasSession) {
-    return NextResponse.redirect(new URL('/login', req.url))
+    const returnUrl = encodeURIComponent(pathname)
+    return NextResponse.redirect(new URL(`/login?returnUrl=${returnUrl}`, req.url))
   }
 
   if (isAuthPage && hasSession) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
+    // If there's a return URL in the query params, use it
+    const returnUrl = req.nextUrl.searchParams.get('returnUrl')
+    const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : '/dashboard'
+    return NextResponse.redirect(new URL(redirectUrl, req.url))
   }
 
-  return NextResponse.next()
+  // Cache buster for authenticated pages to prevent showing stale data
+  const response = NextResponse.next()
+  if (hasSession && isProtectedPath) {
+    response.headers.set('Cache-Control', 'no-store, must-revalidate')
+  }
+
+  return response
 }
 
 export const config = {

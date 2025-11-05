@@ -86,8 +86,12 @@ export default function AuthCallback() {
 
         console.log('[Auth Callback] Session created successfully for user:', session.user.email)
 
-        // Redirect to dashboard
-        router.push('/dashboard')
+        // Check for return URL in query params
+        const params = new URLSearchParams(window.location.search)
+        const returnUrl = params.get('returnUrl')
+        
+        // Redirect to return URL or dashboard
+        router.push(returnUrl ? decodeURIComponent(returnUrl) : '/dashboard')
         router.refresh()
       } catch (e: any) {
         console.error('[Auth Callback] Unexpected error:', e)

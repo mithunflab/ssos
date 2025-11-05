@@ -88,7 +88,8 @@ function LoginForm() {
         }
 
         // Always redirect to dashboard
-        router.push('/dashboard')
+                  const returnUrl = searchParams.get('returnUrl')
+          router.push(returnUrl ? decodeURIComponent(returnUrl) : '/dashboard')
         router.refresh()
       }
     } catch (err) {
@@ -105,11 +106,18 @@ function LoginForm() {
 
     try {
       console.log('[Login] Initiating Google OAuth with PKCE…')
+      
+      // Get return URL from query params
+      const returnUrl = searchParams.get('returnUrl')
+      const callbackUrl = new URL('/auth/callback', window.location.origin)
+      if (returnUrl) {
+        callbackUrl.searchParams.set('returnUrl', returnUrl)
+      }
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl.toString(),
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
