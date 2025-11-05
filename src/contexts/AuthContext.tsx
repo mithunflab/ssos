@@ -1,5 +1,3 @@
-'use client'
-
 import { createContext, useContext, useEffect, useState, useRef, useMemo } from 'react'
 import { User, type AuthChangeEvent, type Session } from '@supabase/supabase-js'
 import { createBrowserClient } from '@/lib/supabase'

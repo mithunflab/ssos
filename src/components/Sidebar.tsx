@@ -1,7 +1,4 @@
-'use client'
-
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -18,7 +15,7 @@ import {
 import { NotificationCenter } from '@/components/NotificationCenter'
 
 export function Sidebar() {
-  const pathname = usePathname()
+  const location = useLocation()
   const { user, signOut, profile } = useAuth()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
@@ -60,7 +57,7 @@ export function Sidebar() {
         {/* Logo Section */}
         <div className="h-20 flex items-center justify-between px-4 border-b border-gray-800 relative">
           {!isCollapsed && (
-            <Link href="/dashboard" className="flex items-center space-x-2">
+            <Link to="/dashboard" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">C</span>
               </div>
@@ -68,7 +65,7 @@ export function Sidebar() {
             </Link>
           )}
           {isCollapsed && (
-            <Link href="/dashboard" className="w-full flex justify-center">
+            <Link to="/dashboard" className="w-full flex justify-center">
               <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">C</span>
               </div>
@@ -93,11 +90,11 @@ export function Sidebar() {
           <ul className="space-y-2 px-3">
             {navItems.map((item) => {
               const Icon = item.icon
-              const isActive = pathname === item.href
+              const isActive = location.pathname === item.href
               return (
                 <li key={item.href}>
                   <Link
-                    href={item.href}
+                    to={item.href}
                     onClick={() => setIsMobileOpen(false)}
                     className={`
                       flex items-center px-3 py-3 rounded-lg transition-all duration-200

@@ -1,17 +1,15 @@
-'use client'
-
-import { usePathname } from 'next/navigation'
+import { useLocation } from 'react-router-dom'
 import { Sidebar } from '@/components/Sidebar'
 import { ReminderEngine } from '@/components/ReminderEngine'
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
+  const location = useLocation()
 
   // Don't show sidebar on auth pages
   const isAuthPage =
-    pathname?.startsWith('/login') ||
-    pathname?.startsWith('/signup') ||
-    pathname?.startsWith('/auth')
+    location.pathname.startsWith('/login') ||
+    location.pathname.startsWith('/signup') ||
+    location.pathname.startsWith('/auth')
 
   if (isAuthPage) {
     return <>{children}</>

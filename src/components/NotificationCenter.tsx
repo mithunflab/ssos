@@ -1,5 +1,3 @@
-'use client'
-
 import { useEffect, useState } from 'react'
 import { X, Bell, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'

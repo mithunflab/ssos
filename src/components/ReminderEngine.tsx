@@ -1,5 +1,3 @@
-'use client'
-
 import { useEffect } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { useReminderStore } from '@/store/reminderStore'

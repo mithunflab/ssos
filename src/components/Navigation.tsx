@@ -1,14 +1,11 @@
-'use client'
-
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Home, Users, Calendar, Settings, Bell, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { NotificationCenter } from '@/components/NotificationCenter'
 
 export function Navigation() {
-  const pathname = usePathname()
+  const location = useLocation()
   const { user, signOut } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
 
@@ -31,18 +28,18 @@ export function Navigation() {
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <Link href="/dashboard" className="text-xl font-bold text-primary-600">
+                <Link to="/dashboard" className="text-xl font-bold text-primary-600">
                   Clienter
                 </Link>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 {navItems.map((item) => {
                   const Icon = item.icon
-                  const isActive = pathname === item.href
+                  const isActive = location.pathname === item.href
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      to={item.href}
                       className={`${
                         isActive
                           ? 'border-primary-500 text-gray-900'
@@ -80,11 +77,11 @@ export function Navigation() {
           <div className="pt-2 pb-3 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon
-              const isActive = pathname === item.href
+              const isActive = location.pathname === item.href
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  to={item.href}
                   className={`${
                     isActive
                       ? 'bg-primary-50 border-primary-500 text-primary-700'
