@@ -1,0 +1,300 @@
+import { useEffect, useState } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
+import { TopBar } from '@/components/TopBar'
+import { DashboardSkeleton } from '@/components/SkeletonLoaders'
+import { Client, ReminderWithMeeting } from '@/types/database'
+import { formatRelativeTime, formatTimeAgo } from '@/lib/date-utils'
+import { formatCurrency } from '@/lib/utils'
+import { fetchDashboardData } from '@/lib/dashboard-queries'
+import { Plus, Users, Calendar, Clock, TrendingUp, ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
+
+export default function DashboardPage() {
+  const { user, profile, loading: authLoading, supabase } = useAuth()
+  const [recentClients, setRecentClients] = useState<Client[]>([])
+  const [upcomingReminders, setUpcomingReminders] = useState<ReminderWithMeeting[]>([])
+  const [stats, setStats] = useState({
+    clients: 0,
+    meetings: 0,
+    totalRevenue: 0,
+    totalPaid: 0,
+    totalDue: 0,
+  })
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isSubscribed = true
+
+    if (authLoading) {
+      setIsLoading(true)
+      return () => { isSubscribed = false }
+    }
+
+    if (!user || !supabase) {
+      setIsLoading(false)
+      return () => { isSubscribed = false }
+    }
+
+    const loadDashboard = async () => {
+      if (!isSubscribed) return
+      
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const data = await fetchDashboardData(supabase, user.id)
+        
+        if (!isSubscribed) return
+
+        setRecentClients(data.recentClients)
+        setUpcomingReminders(data.upcomingReminders)
+        setStats(data.stats)
+        setShowOnboarding(data.recentClients.length === 0)
+      } catch (err: any) {
+        console.error('[Dashboard] Error:', err)
+        if (!isSubscribed) return
+        setError(err.message || 'Failed to load dashboard data')
+      } finally {
+        if (isSubscribed) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadDashboard()
+
+    return () => {
+      isSubscribed = false
+    }
+  }, [user, authLoading, supabase])
+
+  if (authLoading || isLoading) {
+    return <DashboardSkeleton />
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="max-w-xl w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <h1 className="text-2xl font-bold text-orange-600 mb-4">You are not logged in</h1>
+          <p className="text-gray-700 mb-6">
+            Please{' '}
+            <Link to="/login" className="text-blue-600 underline">
+              log in
+            </Link>{' '}
+            to view your dashboard.
+          </p>
+          <Link to="/login" className="btn-primary">
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen">
+      <TopBar
+        title={`Welcome back${profile?.full_name ? `, ${profile.full_name}` : ''}!`}
+        description="Here's what's happening with your freelance business today."
+      />
+
+      <div className="p-6 lg:p-8">
+        {error && (
+          <div className="mb-8 bg-red-50 border-l-4 border-red-500 rounded-xl p-6">
+            <h2 className="text-lg font-bold text-red-900 mb-2">⚠️ Error Loading Dashboard</h2>
+            <p className="text-red-700 mb-4">{error}</p>
+          </div>
+        )}
+        
+        {showOnboarding && !error && (
+          <div className="mb-8 bg-gradient-to-r from-orange-50 to-orange-100 border-l-4 border-orange-500 rounded-xl p-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-2">🎉 Welcome to Clienter!</h2>
+            <p className="text-gray-700 mb-4">
+              Get started by adding your first client.
+            </p>
+            <Link to="/clients/new" className="btn-primary">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Your First Client
+            </Link>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="stat-card group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center group-hover:bg-orange-500 transition-colors">
+                <Users className="w-6 h-6 text-orange-600 group-hover:text-white transition-colors" />
+              </div>
+              <span className="text-3xl font-bold text-gray-900">{stats.clients}</span>
+            </div>
+            <p className="text-sm font-semibold text-gray-600">Total Clients</p>
+          </div>
+
+          <div className="stat-card group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+                <Calendar className="w-6 h-6 text-blue-600 group-hover:text-white transition-colors" />
+              </div>
+              <span className="text-3xl font-bold text-gray-900">{stats.meetings}</span>
+            </div>
+            <p className="text-sm font-semibold text-gray-600">Upcoming Meetings</p>
+          </div>
+
+          <div className="stat-card group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center group-hover:bg-green-500 transition-colors">
+                <TrendingUp className="w-6 h-6 text-green-600 group-hover:text-white transition-colors" />
+              </div>
+              <span className="text-3xl font-bold text-gray-900">
+                {formatCurrency(stats.totalRevenue, profile?.currency || 'INR')}
+              </span>
+            </div>
+            <p className="text-sm font-semibold text-gray-600">Total Revenue</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="card">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center">
+                  <Clock className="w-5 h-5 mr-2 text-orange-500" />
+                  Upcoming Reminders
+                </h2>
+                <Link
+                  to="/meetings"
+                  className="text-sm font-semibold text-orange-500 hover:text-orange-600 flex items-center group"
+                >
+                  View all
+                  <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            </div>
+            <div className="p-6">
+              {upcomingReminders.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No upcoming reminders</p>
+                </div>
+              ) : (
+                <ul className="space-y-4">
+                  {upcomingReminders.map((reminder) => (
+                    <li
+                      key={reminder.id}
+                      className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex-shrink-0 w-2 h-2 bg-orange-500 rounded-full mt-2" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {reminder.meeting.title}
+                        </p>
+                        {reminder.meeting.client && (
+                          <p className="text-xs text-gray-500">{reminder.meeting.client.name}</p>
+                        )}
+                        <p className="text-xs text-gray-400 mt-1">
+                          {formatRelativeTime(reminder.meeting.meeting_time)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900 flex items-center">
+                  <Users className="w-5 h-5 mr-2 text-orange-500" />
+                  Recent Clients
+                </h2>
+                <Link
+                  to="/clients"
+                  className="text-sm font-semibold text-orange-500 hover:text-orange-600 flex items-center group"
+                >
+                  View all
+                  <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            </div>
+            <div className="p-6">
+              {recentClients.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 mb-4">No clients yet</p>
+                  <Link to="/clients/new" className="btn-primary">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Client
+                  </Link>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {recentClients.map((client) => (
+                    <li key={client.id}>
+                      <Link
+                        to={`/clients/${client.id}`}
+                        className="block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
+                              {client.name}
+                            </p>
+                            {client.project_description && (
+                              <p className="text-xs text-gray-500 truncate">
+                                {client.project_description}
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-400 ml-2">
+                            {formatTimeAgo(client.created_at)}
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Link
+            to="/clients/new"
+            className="card p-6 hover:shadow-lg hover:border-orange-200 transition-all group"
+          >
+            <div className="flex items-center">
+              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+                <Plus className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Add Client</h3>
+                <p className="text-sm text-gray-600">Create a new client profile</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            to="/meetings"
+            className="card p-6 hover:shadow-lg hover:border-orange-200 transition-all group"
+          >
+            <div className="flex items-center">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform">
+                <Calendar className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Schedule Meeting</h3>
+                <p className="text-sm text-gray-600">Plan your next client meeting</p>
+              </div>
+            </div>
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
