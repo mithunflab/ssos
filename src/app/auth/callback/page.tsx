@@ -26,20 +26,19 @@ export default function AuthCallback() {
         if (code) {
           console.log('[Auth Callback] Exchanging code for session...')
           try {
-            const { data: exchangeData, error: exchangeError } =
-              await Promise.race([
-                supabase.auth.exchangeCodeForSession(code),
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Session exchange timeout')), 10000)
-                )
-              ])
+            const result = await Promise.race([
+              supabase.auth.exchangeCodeForSession(code),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Session exchange timeout')), 10000)
+              )
+            ]) as any
 
-            if (exchangeError) {
-              console.error('[Auth Callback] Code exchange error:', exchangeError)
-              setError(exchangeError.message)
+            if (result.error) {
+              console.error('[Auth Callback] Code exchange error:', result.error)
+              setError(result.error.message)
               setTimeout(() => {
                 router.push(
-                  '/login?error=oauth_failed&details=' + encodeURIComponent(exchangeError.message)
+                  '/login?error=oauth_failed&details=' + encodeURIComponent(result.error.message)
                 )
               }, 2000)
               return

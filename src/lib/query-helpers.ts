@@ -59,7 +59,7 @@ export async function fetchDashboardData(supabase: SupabaseClient, userId: strin
           .select('*')
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
-          .limit(5)
+          .limit(5) as unknown as Promise<PostgrestResponse<any>>
       ),
       5000,
       'Recent clients fetch'
@@ -74,7 +74,7 @@ export async function fetchDashboardData(supabase: SupabaseClient, userId: strin
           .eq('is_dismissed', false)
           .gte('remind_at', new Date().toISOString())
           .order('remind_at', { ascending: true })
-          .limit(5)
+          .limit(5) as unknown as Promise<PostgrestResponse<any>>
       ),
       5000,
       'Reminders fetch'
@@ -90,7 +90,7 @@ export async function fetchDashboardData(supabase: SupabaseClient, userId: strin
     Promise.all([
       // Client count
       withRetry(() =>
-        supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', userId)
+        supabase.from('clients').select('*', { count: 'exact', head: true }).eq('user_id', userId) as unknown as Promise<PostgrestResponse<any>>
       ),
       // Revenue data
       withRetry(() =>
@@ -98,11 +98,11 @@ export async function fetchDashboardData(supabase: SupabaseClient, userId: strin
           .from('clients')
           .select('total_amount, advance_paid')
           .eq('user_id', userId)
-          .in('status', ['ongoing', 'potential'])
+          .in('status', ['ongoing', 'potential']) as unknown as Promise<PostgrestResponse<any>>
       ),
       // Meeting count
       withRetry(() =>
-        supabase.from('meetings').select('*', { count: 'exact', head: true }).eq('user_id', userId)
+        supabase.from('meetings').select('*', { count: 'exact', head: true }).eq('user_id', userId) as unknown as Promise<PostgrestResponse<any>>
       ),
     ]),
     8000,
@@ -116,10 +116,10 @@ export async function fetchDashboardData(supabase: SupabaseClient, userId: strin
 
   // Calculate totals
   const totalRevenue = (revenueResponse.data || []).reduce(
-    (sum, c) => sum + (c.total_amount || 0),
+    (sum: number, c: any) => sum + (c.total_amount || 0),
     0
   )
-  const totalPaid = (revenueResponse.data || []).reduce((sum, c) => sum + (c.advance_paid || 0), 0)
+  const totalPaid = (revenueResponse.data || []).reduce((sum: number, c: any) => sum + (c.advance_paid || 0), 0)
 
   return {
     recentClients: recentClientsResponse.data || [],

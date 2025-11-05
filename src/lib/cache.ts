@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import type { User, Profile } from '@/types/database'
+import type { Profile } from '@/types/database'
 
 type CacheItem<T> = {
   data: T

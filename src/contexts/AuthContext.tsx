@@ -109,10 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (cached) {
       console.log('[Auth] Profile found in cache:', cached)
       setProfile(cached)
-      // Refresh cache in background after 30 seconds
-      if (Date.now() - globalCache.getTimestamp(cacheKey)! > 30000) {
-        setTimeout(() => refreshProfile(), 0)
-      }
       return
     }
 
