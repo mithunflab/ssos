@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { AuthModal } from './AuthModal'
-import { usePathname } from 'next/navigation'
+import { useLocation } from 'react-router-dom'
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth()
   const [showModal, setShowModal] = useState(false)
-  const pathname = usePathname()
+  const { pathname } = useLocation()
 
   // Public paths that don't require authentication
   const isPublicPath = 

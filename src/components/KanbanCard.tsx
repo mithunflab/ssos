@@ -3,7 +3,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Client } from '@/types/database'
 import { getClientStatusColor, formatCurrency } from '@/lib/utils'
 import { Phone } from 'lucide-react'
-import Link from 'next/link'
+import { Link } from 'react-router-dom'
 
 interface KanbanCardProps {
   client: Client
@@ -38,7 +38,7 @@ export function KanbanCard({ client, isDragging, currency = 'USD' }: KanbanCardP
         dragging ? 'opacity-50 rotate-2' : ''
       }`}
     >
-      <Link href={`/clients/${client.id}`} className="block">
+      <Link to={`/clients/${client.id}`} className="block">
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1 min-w-0">
             <h4 className="text-sm font-bold text-gray-900 truncate">{client.name}</h4>

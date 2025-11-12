@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useNavigate } from 'react-router-dom'
 import { createBrowserClient } from '@/lib/supabase'
 import { Loader2, X } from 'lucide-react'
 
@@ -12,7 +12,7 @@ interface AuthModalProps {
 export function AuthModal({ isOpen, onClose, returnUrl }: AuthModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const router = useRouter()
+  const navigate = useNavigate()
   const supabase = createBrowserClient()
 
   useEffect(() => {
